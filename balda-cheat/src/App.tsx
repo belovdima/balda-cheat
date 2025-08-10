@@ -7,6 +7,7 @@ import { makeTrie } from "./trie";
 import type { Board, Move } from "./types";
 import { norm } from "./letters";
 import { findAllMoves, cloneBoard } from "./solver";
+import { getDictionary } from "./dicts";
 
 const N = 5;
 
@@ -32,7 +33,7 @@ export default function App() {
 
     // загрузка словаря
     useEffect(() => {
-        loadLocalDict().then(setDict);
+        getDictionary().then(setDict);
     }, []);
 
     // поставить стартовое слово в центр (3-я строка)

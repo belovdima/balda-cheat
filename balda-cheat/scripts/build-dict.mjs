@@ -23,13 +23,29 @@ function normWord(s) {
 }
 
 function isNumericLine(s) {
-    // строки типа "1", "2" — номера лексем, пропускаем
     return /^\d+$/.test(s.trim());
 }
 
 function ensureDirForFile(filePath) {
     const dir = path.dirname(filePath);
     fs.mkdirSync(dir, { recursive: true });
+}
+
+// разбор: слово = первое поле; теги = всё остальное (включая пробелы/табы)
+function splitWordAndTags(line) {
+    const m = line.match(/^(\S+)\s+(.+)$/);
+    if (!m) return { word: line.trim(), tagsRaw: "" };
+    return { word: m[1], tagsRaw: m[2] };
+}
+
+// привести теги к списку: запятые/пробелы → разделители
+function parseTags(tagsRaw) {
+    return tagsRaw.replace(/\s+/g, ",").split(",").filter(Boolean);
+}
+
+function hasSingNomnNoun(tags) {
+    const set = new Set(tags.map((t) => t.toLowerCase()));
+    return set.has("noun") && set.has("sing") && set.has("nomn");
 }
 
 // --- основная логика ---
@@ -53,6 +69,7 @@ async function buildDict(inputPath, outputPath) {
     let tooShort = 0;
     let tooLong = 0;
     let badChars = 0;
+    let notNounSingNomn = 0;
 
     for await (const raw of rl) {
         lines++;
@@ -60,11 +77,16 @@ async function buildDict(inputPath, outputPath) {
         if (!line) continue;
         if (isNumericLine(line)) continue;
 
-        // берём первое поле до пробела/табуляции
-        const first = line.split(/\s+/)[0];
-        if (!first) continue;
+        const { word, tagsRaw } = splitWordAndTags(line);
+        if (!word) continue;
 
-        const w = normWord(first);
+        const tags = parseTags(tagsRaw);
+        if (!hasSingNomnNoun(tags)) {
+            notNounSingNomn++;
+            continue;
+        }
+
+        const w = normWord(word);
 
         if (!/^[А-Я]+$/.test(w)) {
             badChars++;
@@ -85,7 +107,6 @@ async function buildDict(inputPath, outputPath) {
         }
     }
 
-    // сортировка: по длине убыв., затем по алфавиту
     const words = Array.from(uniq);
     words.sort((a, b) => b.length - a.length || a.localeCompare(b, "ru"));
 
@@ -97,7 +118,7 @@ async function buildDict(inputPath, outputPath) {
         `Готово: ${kept} уникальных слов из ${lines} строк. Время: ${sec}s`
     );
     console.log(
-        `Отфильтровано: коротких(<${MIN_LEN})=${tooShort}, длинных(>${MAX_LEN})=${tooLong}, некирилл=${badChars}`
+        `Отфильтровано: не NOUN+sing+nomn=${notNounSingNomn}, коротких(<${MIN_LEN})=${tooShort}, длинных(>${MAX_LEN})=${tooLong}, некирилл=${badChars}`
     );
     console.log(`Сохранено в: ${outputPath}`);
 }
