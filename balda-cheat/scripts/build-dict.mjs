@@ -31,14 +31,14 @@ function ensureDirForFile(filePath) {
     fs.mkdirSync(dir, { recursive: true });
 }
 
-// разбор: слово = первое поле; теги = всё остальное (включая пробелы/табы)
+// разбор: слово = первое поле; теги = всё остальное
 function splitWordAndTags(line) {
     const m = line.match(/^(\S+)\s+(.+)$/);
     if (!m) return { word: line.trim(), tagsRaw: "" };
     return { word: m[1], tagsRaw: m[2] };
 }
 
-// привести теги к списку: запятые/пробелы → разделители
+// привести теги к массиву: запятые/пробелы → разделители
 function parseTags(tagsRaw) {
     return tagsRaw.replace(/\s+/g, ",").split(",").filter(Boolean);
 }
@@ -46,6 +46,13 @@ function parseTags(tagsRaw) {
 function hasSingNomnNoun(tags) {
     const set = new Set(tags.map((t) => t.toLowerCase()));
     return set.has("noun") && set.has("sing") && set.has("nomn");
+}
+
+function isProperName(tags) {
+    // Отсеиваем имена/фамилии/отчества/топонимы/организации/бренды
+    const bad = new Set(["name", "surn", "patr", "geox"]);
+    for (const t of tags) if (bad.has(t.toLowerCase())) return true;
+    return false;
 }
 
 // --- основная логика ---
@@ -70,6 +77,7 @@ async function buildDict(inputPath, outputPath) {
     let tooLong = 0;
     let badChars = 0;
     let notNounSingNomn = 0;
+    let removedProper = 0;
 
     for await (const raw of rl) {
         lines++;
@@ -83,6 +91,10 @@ async function buildDict(inputPath, outputPath) {
         const tags = parseTags(tagsRaw);
         if (!hasSingNomnNoun(tags)) {
             notNounSingNomn++;
+            continue;
+        }
+        if (isProperName(tags)) {
+            removedProper++;
             continue;
         }
 
@@ -118,7 +130,7 @@ async function buildDict(inputPath, outputPath) {
         `Готово: ${kept} уникальных слов из ${lines} строк. Время: ${sec}s`
     );
     console.log(
-        `Отфильтровано: не NOUN+sing+nomn=${notNounSingNomn}, коротких(<${MIN_LEN})=${tooShort}, длинных(>${MAX_LEN})=${tooLong}, некирилл=${badChars}`
+        `Отфильтровано: не NOUN+sing+nomn=${notNounSingNomn}, имена/топонимы/организации=${removedProper}, коротких(<${MIN_LEN})=${tooShort}, длинных(>${MAX_LEN})=${tooLong}, некирилл=${badChars}`
     );
     console.log(`Сохранено в: ${outputPath}`);
 }
