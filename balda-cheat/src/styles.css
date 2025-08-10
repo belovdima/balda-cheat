@@ -7,7 +7,11 @@
     --accent2: #ff6b6b;
     --grid: #222832;
     --ok: #8be28b;
+
+    /* базовый размер клетки, переопределяется на мобильных */
+    --cell: 48px;
 }
+
 * {
     box-sizing: border-box;
 }
@@ -35,24 +39,33 @@ h1 {
     border-radius: 12px;
     background: var(--panel);
 }
+.row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .grid {
     display: grid;
     justify-content: center;
-    grid-template-columns: repeat(5, 48px);
+    grid-template-columns: repeat(5, var(--cell));
     gap: 6px;
 }
 .cell {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
+    width: var(--cell);
+    height: var(--cell);
     border: 1px solid var(--grid);
     border-radius: 8px;
     background: #0f141a;
     cursor: pointer;
-    font-size: 18px;
+    user-select: none;
+    font-size: calc(var(--cell) * 0.42);
     font-weight: 700;
+    touch-action: manipulation;
 }
 .cell.empty {
     opacity: 0.6;
@@ -64,12 +77,7 @@ h1 {
     color: #000;
     background: var(--accent2);
 }
-.row {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-}
+
 input,
 textarea,
 button,
@@ -83,24 +91,36 @@ select {
 button {
     cursor: pointer;
 }
+button:active {
+    transform: translateY(1px);
+}
+
 .keyboard {
     display: grid;
     grid-template-columns: repeat(11, 1fr);
     gap: 6px;
 }
 .key {
-    padding: 8px;
+    min-height: 40px;
+    padding: 10px;
     border: 1px solid var(--grid);
     border-radius: 8px;
     background: #0e1319;
     cursor: pointer;
+    user-select: none;
     text-align: center;
+    font-weight: 600;
+    touch-action: manipulation;
+}
+.key:active {
+    transform: scale(0.98);
 }
 .key.active {
     color: #000;
     background: var(--accent);
     font-weight: 800;
 }
+
 .suggestions {
     overflow: auto;
     max-height: 280px;
@@ -117,6 +137,7 @@ button {
 .suggestion:last-child {
     border-bottom: none;
 }
+
 .badge {
     padding: 2px 6px;
     border: 1px solid var(--grid);
@@ -133,4 +154,123 @@ hr {
 label {
     color: var(--muted);
     font-size: 12px;
+}
+
+/* ---------- Мобильная адаптация ---------- */
+
+/* планшеты и уже */
+@media (max-width: 900px) {
+    .container {
+        padding: 0 12px;
+    }
+    /* чуть крупнее клетки на тач-устройствах */
+    :root {
+        --cell: clamp(40px, 9.5vw, 56px);
+    }
+    .keyboard {
+        grid-template-columns: repeat(8, 1fr);
+    }
+    .key {
+        min-height: 44px;
+        font-size: 16px;
+    }
+    .panel {
+        padding: 10px;
+    }
+    h1 {
+        font-size: 16px;
+    }
+    .suggestions {
+        max-height: 40vh;
+    }
+    input,
+    textarea,
+    button,
+    select {
+        font-size: 16px;
+    } /* без зума на iOS */
+    button {
+        width: 100%;
+    } /* кнопки удобнее нажимать большим пальцем */
+    .row {
+        gap: 10px;
+    }
+}
+
+/* телефоны ≤ 600px */
+@media (max-width: 600px) {
+    .container {
+        margin: 16px auto;
+        gap: 12px;
+    }
+    :root {
+        --cell: clamp(38px, 16vw, 52px);
+    }
+    .grid {
+        gap: 5px;
+    }
+    .cell {
+        border-radius: 10px;
+        font-size: calc(var(--cell) * 0.44);
+    }
+    .cell.path {
+        outline-width: 3px;
+    } /* виднее на ретине */
+
+    /* клавиатура крупнее, строк меньше — легче попасть */
+    .keyboard {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+    }
+    .key {
+        min-height: 48px;
+        font-size: 18px;
+    }
+
+    /* список вариантов пониже, чтобы не перекрывал клавиатуру */
+    .suggestions {
+        max-height: 35vh;
+    }
+
+    /* метки/инпуты в столбик */
+    .row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+    .row > * {
+        width: 100%;
+    }
+    .panel label {
+        display: block;
+        margin-bottom: 4px;
+    }
+}
+
+/* маленькие телефоны ≤ 380px */
+@media (max-width: 380px) {
+    :root {
+        --cell: clamp(34px, 18vw, 46px);
+    }
+    .key {
+        min-height: 46px;
+        font-size: 17px;
+    }
+    h1 {
+        font-size: 15px;
+    }
+}
+
+/* сделать клавиатуру «прилипшей» внутри панели на мобилках */
+@media (max-width: 600px) {
+    .keyboard {
+        position: sticky;
+        bottom: 0;
+        padding-bottom: 4px;
+        background: linear-gradient(
+            180deg,
+            rgba(21, 26, 33, 0) 0%,
+            rgba(21, 26, 33, 0.9) 20%,
+            rgba(21, 26, 33, 1) 100%
+        );
+    }
 }
