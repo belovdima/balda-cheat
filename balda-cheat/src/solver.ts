@@ -2,7 +2,8 @@ import type { Board } from "./types";
 import type { Move } from "./types";
 import type { Pos } from "./types";
 import { RU_ALPHABET, norm } from "./letters";
-import { Trie, makeTrie, hasPrefix, isWord } from "./trie";
+import type { Trie } from "./trie";
+import { makeTrie, hasPrefix, isWord } from "./trie";
 
 const N = 5;
 const DIRS = [
