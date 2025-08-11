@@ -542,7 +542,29 @@ label {
     }
 }
 
-/* мелочь для «рипла»: координаты клика (необязательно, но приятно)
-   можно поставить небольшой хэндлер один раз где-то в общих скриптах:
-   document.addEventListener('pointerdown', e => { if(e.target.classList?.contains('key')) { const r=e.target.getBoundingClientRect(); e.target.style.setProperty('--x', ((e.clientX-r.left)/r.width*100)+'%'); e.target.style.setProperty('--y', ((e.clientY-r.top)/r.height*100)+'%'); }});
-*/
+/* Мягкое появление пути + уже существующее свечение */
+@keyframes pathFade {
+    from {
+        opacity: 0.3;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+/* комбинируем две анимации: fade и свечение */
+.cell.path {
+    animation: pathFade 0.18s var(--bezier) both, glow 1.6s ease-out infinite;
+}
+
+/* Подсветка совпадений в быстром поиске */
+mark.hl {
+    padding: 0 2px;
+    border-radius: 4px;
+    color: var(--text);
+    background: rgba(79, 209, 197, 0.22);
+}
+
+/* Рипл уже есть в .key::after — этот блок просто напоминание:
+   координаты устанавливаются JS-обработчиком в App.tsx */

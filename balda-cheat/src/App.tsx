@@ -15,9 +15,36 @@ function parseBanned(input: string): string[] {
         .map(norm)
         .filter(Boolean);
 }
-
 function joinBanned(arr: string[]): string {
     return Array.from(new Set(arr)).join(", ");
+}
+
+// Подсветка совпадений: возвращает массив React-нodels с <mark className="hl">
+function highlightWord(word: string, query: string) {
+    const q = norm(query);
+    if (!q) return word;
+
+    const src = word;
+    const srcNorm = norm(word);
+    const res: React.ReactNode[] = [];
+    let i = 0;
+
+    // Найдём ВСЕ вхождения q в нормализованной строке
+    while (i < srcNorm.length) {
+        const idx = srcNorm.indexOf(q, i);
+        if (idx === -1) {
+            res.push(src.slice(i));
+            break;
+        }
+        if (idx > i) res.push(src.slice(i, idx));
+        res.push(
+            <mark key={idx} className="hl">
+                {src.slice(idx, idx + q.length)}
+            </mark>
+        );
+        i = idx + q.length;
+    }
+    return res;
 }
 
 export default function App() {
@@ -33,10 +60,9 @@ export default function App() {
     const [moves, setMoves] = useState<Move[]>([]);
     const [preview, setPreview] = useState<Move | null>(null);
 
-    // query для быстрого поиска
+    // Быстрый поиск по словам
     const [query, setQuery] = useState<string>("");
 
-    // отфильтрованные варианты по запросу
     const filteredMoves = useMemo(() => {
         const q = norm(query);
         if (!q) return moves;
@@ -47,6 +73,21 @@ export default function App() {
         getDictionary().then(setDict);
     }, []);
 
+    // Ripple для клавиш: вычисляем --x/--y при pointerdown
+    useEffect(() => {
+        const handler = (e: PointerEvent) => {
+            const t = e.target as HTMLElement | null;
+            if (!t || !t.classList || !t.classList.contains("key")) return;
+            const r = t.getBoundingClientRect();
+            const x = ((e.clientX - r.left) / r.width) * 100;
+            const y = ((e.clientY - r.top) / r.height) * 100;
+            t.style.setProperty("--x", x + "%");
+            t.style.setProperty("--y", y + "%");
+        };
+        document.addEventListener("pointerdown", handler);
+        return () => document.removeEventListener("pointerdown", handler);
+    }, []);
+
     // добавить слова в чёрный список (без дублей)
     const addToBlacklist = (words: string | string[]) => {
         const list = Array.isArray(words) ? words : [words];
@@ -54,7 +95,7 @@ export default function App() {
         setBannedInput(joinBanned(Array.from(next)));
     };
 
-    // поставить стартовое слово в центр (3-я строка) + в чёрный список
+    // поставить стартовое слово + в ч/с
     const putStart = () => {
         const s = norm(startWord);
         if (s.length !== 5) {
@@ -70,7 +111,7 @@ export default function App() {
         addToBlacklist(s);
     };
 
-    // клик по ячейке: если выбрана буква — ставим
+    // ручная постановка буквы
     const onCellClick = (r: number, c: number) => {
         if (!picked) return;
         if (board[r][c]) return;
@@ -83,7 +124,7 @@ export default function App() {
         const res = findAllMoves(board, trie, banned);
         setMoves(res);
         setPreview(res[0] ?? null);
-        setQuery(""); // сбросим фильтр, чтобы сразу видеть лучший
+        setQuery(""); // сброс фильтра
     };
 
     const clearCell = (r: number, c: number) => {
@@ -102,7 +143,7 @@ export default function App() {
         setMoves(res);
         setPreview(res[0] ?? null);
         setBannedInput(joinBanned(bannedNext));
-        setQuery(""); // после применения очистим фильтр
+        setQuery("");
     };
 
     return (
@@ -239,7 +280,7 @@ export default function App() {
                                 onClick={() => setPreview(m)}
                                 style={{ cursor: "pointer" }}>
                                 <div>
-                                    <b>{m.word}</b>{" "}
+                                    <b>{highlightWord(m.word, query)}</b>{" "}
                                     <span className="badge">
                                         {m.path.length} букв
                                     </span>
