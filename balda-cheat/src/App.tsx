@@ -1,15 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BoardView } from "./components/BoardView";
 import { Keyboard } from "./components/Keyboard";
-import { emptyBoard } from "./solver";
-import { loadLocalDict } from "./dicts";
+import { emptyBoard, findAllMoves, cloneBoard } from "./solver";
 import { makeTrie } from "./trie";
 import type { Board, Move } from "./types";
 import { norm } from "./letters";
-import { findAllMoves, cloneBoard } from "./solver";
 import { getDictionary } from "./dicts";
 
 const N = 5;
+
+function parseBanned(input: string): string[] {
+    return input
+        .split(/\s*[,\n;]\s*|\s{2,}/)
+        .map(norm)
+        .filter(Boolean);
+}
+
+function joinBanned(arr: string[]): string {
+    return Array.from(new Set(arr)).join(", ");
+}
 
 export default function App() {
     const [board, setBoard] = useState<Board>(() => emptyBoard());
@@ -18,25 +27,34 @@ export default function App() {
 
     const [picked, setPicked] = useState<string | null>(null);
     const [bannedInput, setBannedInput] = useState<string>("");
-    const banned = useMemo(
-        () =>
-            bannedInput
-                .split(/\s*[,\n;]\s*|\s{2,}/)
-                .map(norm)
-                .filter(Boolean),
-        [bannedInput]
-    );
+    const banned = useMemo(() => parseBanned(bannedInput), [bannedInput]);
 
     const [startWord, setStartWord] = useState("ЛИЛИЯ");
     const [moves, setMoves] = useState<Move[]>([]);
     const [preview, setPreview] = useState<Move | null>(null);
 
-    // загрузка словаря
+    // query для быстрого поиска
+    const [query, setQuery] = useState<string>("");
+
+    // отфильтрованные варианты по запросу
+    const filteredMoves = useMemo(() => {
+        const q = norm(query);
+        if (!q) return moves;
+        return moves.filter((m) => norm(m.word).includes(q));
+    }, [moves, query]);
+
     useEffect(() => {
         getDictionary().then(setDict);
     }, []);
 
-    // поставить стартовое слово в центр (3-я строка)
+    // добавить слова в чёрный список (без дублей)
+    const addToBlacklist = (words: string | string[]) => {
+        const list = Array.isArray(words) ? words : [words];
+        const next = new Set([...parseBanned(bannedInput), ...list.map(norm)]);
+        setBannedInput(joinBanned(Array.from(next)));
+    };
+
+    // поставить стартовое слово в центр (3-я строка) + в чёрный список
     const putStart = () => {
         const s = norm(startWord);
         if (s.length !== 5) {
@@ -44,11 +62,12 @@ export default function App() {
             return;
         }
         const b = emptyBoard();
-        const r = 2; // третья строка (0..4)
+        const r = 2;
         for (let i = 0; i < 5; i++) b[r][i] = s[i];
         setBoard(b);
         setMoves([]);
         setPreview(null);
+        addToBlacklist(s);
     };
 
     // клик по ячейке: если выбрана буква — ставим
@@ -64,6 +83,7 @@ export default function App() {
         const res = findAllMoves(board, trie, banned);
         setMoves(res);
         setPreview(res[0] ?? null);
+        setQuery(""); // сбросим фильтр, чтобы сразу видеть лучший
     };
 
     const clearCell = (r: number, c: number) => {
@@ -72,8 +92,22 @@ export default function App() {
         setBoard(b2);
     };
 
+    // применить предложенный ход
+    const applyMove = (m: Move) => {
+        const b2 = cloneBoard(board);
+        b2[m.insert.r][m.insert.c] = m.insert.letter;
+        const bannedNext = Array.from(new Set([...banned, norm(m.word)]));
+        const res = findAllMoves(b2, trie, bannedNext);
+        setBoard(b2);
+        setMoves(res);
+        setPreview(res[0] ?? null);
+        setBannedInput(joinBanned(bannedNext));
+        setQuery(""); // после применения очистим фильтр
+    };
+
     return (
         <div className="container">
+            {/* Хедер */}
             <div className="panel">
                 <h1>Балда — помощник</h1>
                 <div className="row" style={{ gap: 12 }}>
@@ -93,6 +127,7 @@ export default function App() {
                 </div>
             </div>
 
+            {/* Текущее поле */}
             <div className="panel">
                 <h1>Текущее поле</h1>
                 <BoardView board={board} onCellClick={onCellClick} />
@@ -118,7 +153,6 @@ export default function App() {
                         <div style={{ height: 6 }} />
                         <button
                             onClick={() => {
-                                // быстрый режим: удалим последнюю не пустую (для удобства)
                                 for (let r = N - 1; r >= 0; r--)
                                     for (let c = N - 1; c >= 0; c--) {
                                         if (board[r][c]) {
@@ -133,6 +167,7 @@ export default function App() {
                 </div>
             </div>
 
+            {/* Предпросмотр */}
             <div className="panel">
                 <h1>Предпросмотр лучшего хода</h1>
                 {preview ? (
@@ -150,8 +185,13 @@ export default function App() {
                                     {preview.insert.letter}»
                                 </div>
                             </div>
-                            <div className="badge">
-                                оценка {preview.score.toFixed(1)}
+                            <div className="row" style={{ gap: 8 }}>
+                                <div className="badge">
+                                    оценка {preview.score.toFixed(1)}
+                                </div>
+                                <button onClick={() => applyMove(preview)}>
+                                    Применить
+                                </button>
                             </div>
                         </div>
                         <div style={{ height: 8 }} />
@@ -171,34 +211,73 @@ export default function App() {
                 )}
             </div>
 
+            {/* Список вариантов + быстрый поиск */}
             <div className="panel">
-                <h1>Все варианты (клик — показать как превью)</h1>
-                <div className="suggestions">
-                    {moves.map((m, i) => (
-                        <div
-                            key={i}
-                            className="suggestion"
-                            onClick={() => setPreview(m)}>
-                            <div>
-                                <b>{m.word}</b>{" "}
-                                <span className="badge">
-                                    {m.path.length} букв
-                                </span>
+                <h1>Все варианты (клик — выбрать)</h1>
+                <div className="row" style={{ gap: 8 }}>
+                    <input
+                        placeholder="Быстрый поиск по словам…"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        style={{ flex: 1, minWidth: 160 }}
+                    />
+                    <span className="badge">
+                        Показано: {filteredMoves.length} / {moves.length}
+                    </span>
+                </div>
+                <div className="suggestions" style={{ marginTop: 8 }}>
+                    {filteredMoves.map((m, i) => {
+                        const isActive =
+                            preview &&
+                            m.word === preview.word &&
+                            m.insert.r === preview.insert.r &&
+                            m.insert.c === preview.insert.c;
+                        return (
+                            <div
+                                key={i}
+                                className="suggestion"
+                                onClick={() => setPreview(m)}
+                                style={{ cursor: "pointer" }}>
+                                <div>
+                                    <b>{m.word}</b>{" "}
+                                    <span className="badge">
+                                        {m.path.length} букв
+                                    </span>
+                                </div>
+                                <div>
+                                    {isActive ? (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                applyMove(m);
+                                            }}>
+                                            Применить
+                                        </button>
+                                    ) : (
+                                        <>
+                                            вставь [{m.insert.r + 1}:
+                                            {m.insert.c + 1}] «{m.insert.letter}
+                                            »
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                            <div>
-                                вставь [{m.insert.r + 1}:{m.insert.c + 1}] «
-                                {m.insert.letter}»
-                            </div>
+                        );
+                    })}
+                    {filteredMoves.length === 0 && (
+                        <div className="badge" style={{ margin: 8 }}>
+                            Ничего не найдено
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
 
+            {/* Чёрный список */}
             <div className="panel">
-                <h1>Исключить слова (чёрный список)</h1>
+                <h1>Использованные слова</h1>
                 <div className="row">
                     <textarea
-                        placeholder="Перечисляй через запятую или с новой строки. Например: ЛИЛИЯ, ЛИС"
+                        placeholder="Через запятую или с новой строки"
                         rows={4}
                         style={{ width: "100%" }}
                         value={bannedInput}
@@ -208,7 +287,7 @@ export default function App() {
                 <hr />
                 <small className="badge">
                     Слова из этого списка не будут предлагаться. Стартовое слово
-                    добавь сюда — чтобы не использовать его заново.
+                    добавляется сюда автоматически.
                 </small>
             </div>
         </div>
