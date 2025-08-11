@@ -7,8 +7,6 @@
     --accent2: #ff6b6b;
     --grid: #222832;
     --ok: #8be28b;
-
-    /* базовый размер клетки, переопределяется на мобильных */
     --cell: 48px;
 }
 
@@ -156,14 +154,11 @@ label {
     font-size: 12px;
 }
 
-/* ---------- Мобильная адаптация ---------- */
-
 /* планшеты и уже */
 @media (max-width: 900px) {
     .container {
         padding: 0 12px;
     }
-    /* чуть крупнее клетки на тач-устройствах */
     :root {
         --cell: clamp(40px, 9.5vw, 56px);
     }
@@ -188,10 +183,10 @@ label {
     button,
     select {
         font-size: 16px;
-    } /* без зума на iOS */
+    }
     button {
         width: 100%;
-    } /* кнопки удобнее нажимать большим пальцем */
+    }
     .row {
         gap: 10px;
     }
@@ -215,9 +210,7 @@ label {
     }
     .cell.path {
         outline-width: 3px;
-    } /* виднее на ретине */
-
-    /* клавиатура крупнее, строк меньше — легче попасть */
+    }
     .keyboard {
         grid-template-columns: repeat(6, 1fr);
         gap: 6px;
@@ -226,13 +219,9 @@ label {
         min-height: 48px;
         font-size: 18px;
     }
-
-    /* список вариантов пониже, чтобы не перекрывал клавиатуру */
     .suggestions {
         max-height: 35vh;
     }
-
-    /* метки/инпуты в столбик */
     .row {
         align-items: stretch;
         flex-direction: column;
@@ -260,7 +249,7 @@ label {
     }
 }
 
-/* сделать клавиатуру «прилипшей» внутри панели на мобилках */
+/* клавиатура «прилипшая» */
 @media (max-width: 600px) {
     .keyboard {
         position: sticky;
@@ -272,5 +261,96 @@ label {
             rgba(21, 26, 33, 0.9) 20%,
             rgba(21, 26, 33, 1) 100%
         );
+    }
+}
+
+/* десктопная раскладка */
+@media (min-width: 1100px) {
+    .container {
+        display: grid;
+        align-items: start;
+        max-width: 1200px;
+        grid-template-columns: 1.1fr 1.1fr 0.8fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "header  header  header"
+            "board   preview list"
+            "black   black   black";
+        gap: 16px;
+    }
+    .container > .panel:nth-of-type(1) {
+        grid-area: header;
+    }
+    .container > .panel:nth-of-type(2) {
+        grid-area: board;
+    }
+    .container > .panel:nth-of-type(3) {
+        grid-area: preview;
+    }
+    .container > .panel:nth-of-type(4) {
+        grid-area: list;
+    }
+    .container > .panel:nth-of-type(5) {
+        grid-area: black;
+    }
+
+    .container > .panel:nth-of-type(3),
+    .container > .panel:nth-of-type(4) {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 520px;
+    }
+
+    /* ПЕРЕОПРЕДЕЛЕНИЕ: список ровно 10 строк */
+    :root {
+        --row: 40px;
+    }
+    .container > .panel:nth-of-type(4) .suggestions {
+        overflow-y: auto;
+        flex: 0 0 auto;
+        max-height: calc(var(--row) * 10);
+    }
+    .container > .panel:nth-of-type(4) .suggestion {
+        display: grid;
+        align-items: center;
+        height: var(--row);
+        padding: 0 10px;
+        border-bottom: 1px solid var(--grid);
+        grid-template-columns: 1fr auto;
+        column-gap: 8px;
+    }
+    .container > .panel:nth-of-type(4) .suggestion:last-child {
+        border-bottom: none;
+    }
+    .container > .panel:nth-of-type(4) .suggestion > div:first-child {
+        overflow: hidden;
+        min-width: 0;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    :root {
+        --cell: 52px;
+    }
+    .grid {
+        gap: 8px;
+    }
+    .cell {
+        font-size: calc(var(--cell) * 0.42);
+    }
+
+    .container > .panel:nth-of-type(5) textarea {
+        min-height: 120px;
+    }
+}
+
+/* большие экраны */
+@media (min-width: 1440px) {
+    .container {
+        max-width: 1400px;
+    }
+    :root {
+        --cell: 56px;
     }
 }
