@@ -138,6 +138,13 @@ export default function App() {
         [board, banned, trie]
     );
 
+    useEffect(() => {
+        const t = setTimeout(() => {
+            recalc(board, banned);
+        }, 0);
+        return () => clearTimeout(t);
+    }, [board]);
+
     const handleCellClick = (r: number, c: number) => {
         if (deleteArmed) {
             if (!board[r][c]) return;
@@ -146,7 +153,7 @@ export default function App() {
             setBoard(b2);
             setDeleteArmed(false);
             setViewMode("analyze");
-            recalc(b2);
+            // recalc(b2);
             return;
         }
         if (viewMode === "edit") {
@@ -156,7 +163,7 @@ export default function App() {
             setBoard(b2);
             setPicked(null);
             setViewMode("analyze");
-            recalc(b2);
+            // recalc(b2);
         }
     };
 
