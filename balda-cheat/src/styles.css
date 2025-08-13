@@ -684,3 +684,114 @@ mark.hl {
         margin-left: 48px;
     }
 }
+
+/* --- Welcome start cells (Wordle-like) --- */
+.start-cells {
+    display: flex;
+    justify-content: center;
+    margin: 12px 0 16px;
+    gap: 10px;
+}
+
+.start-cell {
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--grid);
+    border-radius: 10px;
+    color: var(--text);
+    background: #0f141a;
+    box-shadow: var(--inner-shadow), 0 4px 12px rgba(0, 0, 0, 0.28);
+    transition: transform var(--dur) var(--bezier),
+        border-color var(--dur) var(--bezier),
+        box-shadow var(--dur) var(--bezier), background var(--dur) var(--bezier);
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.start-cell:hover {
+    border-color: #2b3340;
+}
+
+.start-cell:focus {
+    border-color: rgba(79, 209, 197, 0.6);
+    box-shadow: var(--ring), var(--inner-shadow);
+}
+
+/* "поп" при заполнении */
+@keyframes startPop {
+    0% {
+        transform: scale(0.92);
+    }
+    60% {
+        transform: scale(1.06);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+.start-cell.filled {
+    background: #101820;
+    animation: startPop 0.18s var(--bezier);
+}
+
+/* лёгкая подсветка каретки */
+.start-cell:focus:not(.filled) {
+    background: linear-gradient(180deg, #0f141a, #0e1319);
+}
+
+/* шейк при ошибке */
+@keyframes startShake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    20% {
+        transform: translateX(-6px);
+    }
+    40% {
+        transform: translateX(6px);
+    }
+    60% {
+        transform: translateX(-4px);
+    }
+    80% {
+        transform: translateX(4px);
+    }
+}
+.start-cells.shake {
+    animation: startShake 0.32s ease;
+}
+
+/* кнопка старта */
+.start-button {
+    padding: 10px 22px;
+    border: 1px solid rgba(79, 209, 197, 0.35);
+    border-radius: 12px;
+    background: linear-gradient(
+        180deg,
+        rgba(79, 209, 197, 0.22),
+        rgba(79, 209, 197, 0.08)
+    );
+    box-shadow: 0 6px 16px rgba(79, 209, 197, 0.12);
+    transition: transform var(--dur) var(--bezier),
+        box-shadow var(--dur) var(--bezier), opacity var(--dur) var(--bezier);
+    letter-spacing: 0.2px;
+    font-weight: 800;
+}
+.start-button.ok {
+    /* чуть ярче, когда валидно */
+    border-color: rgba(79, 209, 197, 0.6);
+    box-shadow: 0 8px 20px rgba(79, 209, 197, 0.18);
+}
+.start-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+@media (hover: hover) {
+    .start-button.ok:hover {
+        box-shadow: 0 12px 28px rgba(79, 209, 197, 0.22);
+        transform: translateY(-1px);
+    }
+}
