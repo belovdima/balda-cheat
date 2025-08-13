@@ -57,7 +57,9 @@ export const SuggestionsList: React.FC<Props> = (props) => {
                         }}
                         style={{ cursor: "pointer" }}>
                         <div>
-                            <b>{highlight(m.word, query)}</b>{" "}
+                            <b className="suggestion-word">
+                                {highlight(m.word, query)}
+                            </b>{" "}
                             <span className="badge">{m.path.length} букв</span>
                         </div>
                         <div>

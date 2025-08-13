@@ -457,6 +457,9 @@ label {
             min-height: 0; /* на мобилках пусть высота адаптивная */
         }
     }
+    :root {
+        --cell: 80px !important; /* побольше клетки */
+    }
     /* ----- Простая раскладка без grid ----- */
     .container {
         max-width: 1200px;
@@ -514,6 +517,11 @@ label {
         grid-template-columns: 1fr auto;
         column-gap: 8px;
     }
+
+    .suggestion-word {
+        font-size: 20px;
+        font-weight: 600;
+    }
 }
 
 @media (max-width: 900px) {
@@ -532,6 +540,9 @@ label {
 
 /* большие экраны */
 @media (min-width: 1440px) {
+    :root {
+        --cell: 80px !important;
+    }
     .container {
         max-width: 1400px;
     }
