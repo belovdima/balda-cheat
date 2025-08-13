@@ -1,13 +1,19 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { BoardView } from "./components/BoardView";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { HeaderBar } from "./components/HeaderBar";
+import { WelcomeScreen } from "./components/WelcomeScreen";
+import { PreviewPanel } from "./components/PreviewPanel";
+import { BoardEditorPanel } from "./components/BoardEditorPanel";
+import { VariantsPanel } from "./components/VariantsPanel";
 import { Keyboard } from "./components/Keyboard";
+
 import { emptyBoard, findAllMoves, cloneBoard } from "./solver";
 import { makeTrie } from "./trie";
 import type { Board, Move } from "./types";
 import { norm } from "./letters";
 import { getDictionary } from "./dicts";
 
-const N = 5;
+type Phase = "welcome" | "play";
+type ViewMode = "analyze" | "edit";
 
 function parseBanned(input: string): string[] {
     return input
@@ -18,18 +24,13 @@ function parseBanned(input: string): string[] {
 function joinBanned(arr: string[]): string {
     return Array.from(new Set(arr)).join(", ");
 }
-
-// Подсветка совпадений: возвращает массив React-нodels с <mark className="hl">
 function highlightWord(word: string, query: string) {
     const q = norm(query);
     if (!q) return word;
-
     const src = word;
     const srcNorm = norm(word);
     const res: React.ReactNode[] = [];
     let i = 0;
-
-    // Найдём ВСЕ вхождения q в нормализованной строке
     while (i < srcNorm.length) {
         const idx = srcNorm.indexOf(q, i);
         if (idx === -1) {
@@ -48,19 +49,23 @@ function highlightWord(word: string, query: string) {
 }
 
 export default function App() {
-    const [board, setBoard] = useState<Board>(() => emptyBoard());
     const [dict, setDict] = useState<string[]>([]);
     const trie = useMemo(() => makeTrie(dict), [dict]);
 
-    const [picked, setPicked] = useState<string | null>(null);
-    const [bannedInput, setBannedInput] = useState<string>("");
-    const banned = useMemo(() => parseBanned(bannedInput), [bannedInput]);
+    const [phase, setPhase] = useState<Phase>("welcome");
+    const [viewMode, setViewMode] = useState<ViewMode>("analyze");
 
+    const [board, setBoard] = useState<Board>(() => emptyBoard());
     const [startWord, setStartWord] = useState("ЛИЛИЯ");
     const [moves, setMoves] = useState<Move[]>([]);
     const [preview, setPreview] = useState<Move | null>(null);
 
-    // Быстрый поиск по словам
+    const [bannedInput, setBannedInput] = useState<string>("");
+    const banned = useMemo(() => parseBanned(bannedInput), [bannedInput]);
+
+    const [picked, setPicked] = useState<string | null>(null);
+    const [deleteArmed, setDeleteArmed] = useState<boolean>(false);
+
     const [query, setQuery] = useState<string>("");
 
     const filteredMoves = useMemo(() => {
@@ -73,11 +78,10 @@ export default function App() {
         getDictionary().then(setDict);
     }, []);
 
-    // Ripple для клавиш: вычисляем --x/--y при pointerdown
     useEffect(() => {
         const handler = (e: PointerEvent) => {
             const t = e.target as HTMLElement | null;
-            if (!t || !t.classList || !t.classList.contains("key")) return;
+            if (!t?.classList?.contains("key")) return;
             const r = t.getBoundingClientRect();
             const x = ((e.clientX - r.left) / r.width) * 100;
             const y = ((e.clientY - r.top) / r.height) * 100;
@@ -88,15 +92,19 @@ export default function App() {
         return () => document.removeEventListener("pointerdown", handler);
     }, []);
 
-    // добавить слова в чёрный список (без дублей)
-    const addToBlacklist = (words: string | string[]) => {
-        const list = Array.isArray(words) ? words : [words];
-        const next = new Set([...parseBanned(bannedInput), ...list.map(norm)]);
-        setBannedInput(joinBanned(Array.from(next)));
-    };
+    const addToBlacklist = useCallback(
+        (words: string | string[]) => {
+            const list = Array.isArray(words) ? words : [words];
+            const next = new Set([
+                ...parseBanned(bannedInput),
+                ...list.map(norm),
+            ]);
+            setBannedInput(joinBanned(Array.from(next)));
+        },
+        [bannedInput]
+    );
 
-    // поставить стартовое слово + в ч/с
-    const putStart = () => {
+    const startGame = () => {
         const s = norm(startWord);
         if (s.length !== 5) {
             alert("Стартовое слово должно быть из 5 букв.");
@@ -109,31 +117,54 @@ export default function App() {
         setMoves([]);
         setPreview(null);
         addToBlacklist(s);
+        setPhase("play");
+        setViewMode("analyze");
+        setPicked(null);
+        setDeleteArmed(false);
+
+        if (dict.length > 0) {
+            const res = findAllMoves(b, trie, [...parseBanned(bannedInput), s]);
+            setMoves(res);
+            setPreview(res[0] ?? null);
+        }
     };
 
-    // ручная постановка буквы
-    const onCellClick = (r: number, c: number) => {
-        if (!picked) return;
-        if (board[r][c]) return;
-        const b2 = cloneBoard(board);
-        b2[r][c] = picked;
-        setBoard(b2);
+    const recalc = useCallback(
+        (b: Board = board, bannedArr: string[] = banned) => {
+            const res = findAllMoves(b, trie, bannedArr);
+            setMoves(res);
+            setPreview(res[0] ?? null);
+        },
+        [board, banned, trie]
+    );
+
+    const handleCellClick = (r: number, c: number) => {
+        if (deleteArmed) {
+            if (!board[r][c]) return;
+            const b2 = cloneBoard(board);
+            b2[r][c] = "";
+            setBoard(b2);
+            setDeleteArmed(false);
+            setViewMode("analyze");
+            recalc(b2);
+            return;
+        }
+        if (viewMode === "edit") {
+            if (!picked || board[r][c]) return;
+            const b2 = cloneBoard(board);
+            b2[r][c] = picked;
+            setBoard(b2);
+            setPicked(null);
+            setViewMode("analyze");
+            recalc(b2);
+        }
     };
 
     const calc = () => {
-        const res = findAllMoves(board, trie, banned);
-        setMoves(res);
-        setPreview(res[0] ?? null);
-        setQuery(""); // сброс фильтра
+        recalc();
+        setQuery("");
     };
 
-    const clearCell = (r: number, c: number) => {
-        const b2 = cloneBoard(board);
-        b2[r][c] = "";
-        setBoard(b2);
-    };
-
-    // применить предложенный ход
     const applyMove = (m: Move) => {
         const b2 = cloneBoard(board);
         b2[m.insert.r][m.insert.c] = m.insert.letter;
@@ -146,175 +177,103 @@ export default function App() {
         setQuery("");
     };
 
-    return (
-        <div className="container">
-            {/* Хедер */}
-            <div className="panel">
-                <h1>Балда — помощник</h1>
-                <div className="row" style={{ gap: 12 }}>
-                    <label>
-                        Стартовое слово (5):&nbsp;
-                        <input
-                            value={startWord}
-                            onChange={(e) => setStartWord(e.target.value)}
-                            style={{ width: 160 }}
-                        />
-                    </label>
-                    <button onClick={putStart}>Поставить старт</button>
-                    <button onClick={calc}>
-                        Просчитать всевозможные слова
-                    </button>
-                    <span className="badge">Найдено: {moves.length}</span>
-                </div>
-            </div>
+    if (phase === "welcome") {
+        return (
+            <WelcomeScreen
+                startWord={startWord}
+                onChangeStartWord={setStartWord}
+                onStart={startGame}
+                onCalc={calc}
+                dictCount={dict.length || undefined}
+            />
+        );
+    }
 
-            {/* Текущее поле */}
-            <div className="panel">
-                <h1>Текущее поле</h1>
-                <BoardView board={board} onCellClick={onCellClick} />
-                <div style={{ height: 8 }} />
-                <div className="row">
-                    <div style={{ flex: 1 }}>
-                        <label>
-                            Клавиатура (сначала выбери букву, затем кликни в
-                            пустую клетку):
-                        </label>
-                        <div style={{ height: 6 }} />
-                        <Keyboard value={picked} onPick={setPicked} />
-                    </div>
-                    <div style={{ minWidth: 220 }}>
-                        <label>Удалить букву из клетки:</label>
-                        <div style={{ height: 6 }} />
-                        <div className="row">
-                            <small className="badge">
-                                Клик по пустой клетке с выбранной буквой —
-                                ставит её
-                            </small>
-                        </div>
-                        <div style={{ height: 6 }} />
-                        <button
-                            onClick={() => {
-                                for (let r = N - 1; r >= 0; r--)
-                                    for (let c = N - 1; c >= 0; c--) {
-                                        if (board[r][c]) {
-                                            clearCell(r, c);
-                                            return;
-                                        }
-                                    }
-                            }}>
-                            Удалить последнюю букву
+    return (
+        <div className="container" style={{ maxWidth: 1200 }}>
+            <HeaderBar
+                startWord={startWord}
+                onChangeStartWord={setStartWord}
+                onRestart={() => {
+                    setPhase("welcome");
+                    setViewMode("analyze");
+                }}
+                totalMoves={moves.length}
+            />
+
+            {/* Левая колонка */}
+            {viewMode === "edit" ? (
+                <BoardEditorPanel
+                    board={board}
+                    onCellClick={handleCellClick}
+                    onCancel={() => setViewMode("analyze")}
+                />
+            ) : (
+                <PreviewPanel
+                    board={board}
+                    preview={preview}
+                    onApply={applyMove}
+                    onCellClick={handleCellClick}
+                />
+            )}
+
+            {/* Правая колонка */}
+            {viewMode === "edit" ? (
+                <div className="panel">
+                    <h1>Клавиатура</h1>
+                    <div className="row" style={{ gap: 8 }}>
+                        <span className="badge">
+                            Выбрано: {picked ? `«${picked}»` : "—"}
+                        </span>
+                        <button onClick={() => setPicked(null)}>
+                            Сбросить выбор
                         </button>
                     </div>
-                </div>
-            </div>
-
-            {/* Предпросмотр */}
-            <div className="panel">
-                <h1>Предпросмотр лучшего хода</h1>
-                {preview ? (
-                    <>
-                        <div
-                            className="row"
-                            style={{ justifyContent: "space-between" }}>
-                            <div>
-                                <div>
-                                    <b>Слово:</b> {preview.word}
-                                </div>
-                                <div>
-                                    <b>Вставка:</b> [{preview.insert.r + 1}:
-                                    {preview.insert.c + 1}] «
-                                    {preview.insert.letter}»
-                                </div>
-                            </div>
-                            <div className="row" style={{ gap: 8 }}>
-                                <div className="badge">
-                                    оценка {preview.score.toFixed(1)}
-                                </div>
-                                <button onClick={() => applyMove(preview)}>
-                                    Применить
-                                </button>
-                            </div>
-                        </div>
-                        <div style={{ height: 8 }} />
-                        <BoardView
-                            board={(() => {
-                                const b2 = cloneBoard(board);
-                                b2[preview.insert.r][preview.insert.c] =
-                                    preview.insert.letter;
-                                return b2;
-                            })()}
-                            path={preview.path}
-                            insert={preview.insert}
-                        />
-                    </>
-                ) : (
-                    <div className="badge">Нажми «Просчитать…»</div>
-                )}
-            </div>
-
-            {/* Список вариантов + быстрый поиск */}
-            <div className="panel">
-                <h1>Все варианты (клик — выбрать)</h1>
-                <div className="row" style={{ gap: 8 }}>
-                    <input
-                        placeholder="Быстрый поиск по словам…"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        style={{ flex: 1, minWidth: 160 }}
+                    <div style={{ height: 8 }} />
+                    {/* твоя Keyboard уже поддерживает RU */}
+                    <Keyboard
+                        value={picked}
+                        onPick={setPicked}
+                        layout="qwerty-ru"
                     />
-                    <span className="badge">
-                        Показано: {filteredMoves.length} / {moves.length}
-                    </span>
+                    <hr />
+                    <div className="row" style={{ gap: 8 }}>
+                        <button onClick={() => setViewMode("analyze")}>
+                            Не ставить букву
+                        </button>
+                        <button
+                            onClick={() => {
+                                setDeleteArmed(true);
+                                setViewMode("edit");
+                            }}>
+                            Удалить букву на поле
+                        </button>
+                        {deleteArmed && (
+                            <small className="badge">
+                                Кликни по букве на поле для удаления
+                            </small>
+                        )}
+                    </div>
                 </div>
-                <div className="suggestions" style={{ marginTop: 8 }}>
-                    {filteredMoves.map((m, i) => {
-                        const isActive =
-                            preview &&
-                            m.word === preview.word &&
-                            m.insert.r === preview.insert.r &&
-                            m.insert.c === preview.insert.c;
-                        return (
-                            <div
-                                key={i}
-                                className="suggestion"
-                                onClick={() => setPreview(m)}
-                                style={{ cursor: "pointer" }}>
-                                <div>
-                                    <b>{highlightWord(m.word, query)}</b>{" "}
-                                    <span className="badge">
-                                        {m.path.length} букв
-                                    </span>
-                                </div>
-                                <div>
-                                    {isActive ? (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                applyMove(m);
-                                            }}>
-                                            Применить
-                                        </button>
-                                    ) : (
-                                        <>
-                                            вставь [{m.insert.r + 1}:
-                                            {m.insert.c + 1}] «{m.insert.letter}
-                                            »
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {filteredMoves.length === 0 && (
-                        <div className="badge" style={{ margin: 8 }}>
-                            Ничего не найдено
-                        </div>
-                    )}
-                </div>
-            </div>
+            ) : (
+                <VariantsPanel
+                    moves={moves}
+                    filteredMoves={filteredMoves}
+                    query={query}
+                    onChangeQuery={setQuery}
+                    onNeedEdit={() => setViewMode("edit")}
+                    onArmDelete={() => setDeleteArmed(true)}
+                    deleteArmed={deleteArmed}
+                    onRecalc={calc}
+                    active={preview}
+                    onPickPreview={setPreview}
+                    onApply={applyMove}
+                    highlight={highlightWord}
+                />
+            )}
 
-            {/* Чёрный список */}
-            <div className="panel">
+            {/* Низ: чёрный список */}
+            <div className="panel" style={{ gridArea: "black" }}>
                 <h1>Использованные слова</h1>
                 <div className="row">
                     <textarea
@@ -330,6 +289,17 @@ export default function App() {
                     Слова из этого списка не будут предлагаться. Стартовое слово
                     добавляется сюда автоматически.
                 </small>
+                <div style={{ height: 6 }} />
+                <div className="row" style={{ gap: 8 }}>
+                    <button onClick={() => recalc()}>Пересчитать</button>
+                    <button
+                        onClick={() => {
+                            setBannedInput("");
+                            recalc(board, []);
+                        }}>
+                        Очистить список
+                    </button>
+                </div>
             </div>
         </div>
     );
