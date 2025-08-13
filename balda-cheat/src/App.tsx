@@ -199,6 +199,13 @@ export default function App() {
                     onRestart={() => {
                         setPhase("welcome");
                         setViewMode("analyze");
+                        setBannedInput(""); // ← очистить чёрный список
+                        setMoves([]); // сбросить список ходов
+                        setPreview(null); // сбросить превью
+                        setBoard(emptyBoard()); // пустое поле
+                        setPicked(null); // сброс выбора буквы
+                        setDeleteArmed(false); // выйти из режима удаления
+                        setQuery(""); // очистить поиск
                     }}
                     totalMoves={moves.length}
                 />
