@@ -12,7 +12,6 @@ export const WelcomeScreen: React.FC<Props> = ({
     startWord,
     onChangeStartWord,
     onStart,
-    onCalc,
     dictCount,
 }) => {
     const onEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
