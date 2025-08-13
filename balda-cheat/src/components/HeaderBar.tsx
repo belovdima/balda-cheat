@@ -13,7 +13,7 @@ export const HeaderBar: React.FC<Props> = ({
     onRestart,
     totalMoves,
 }) => (
-    <div className="panel" style={{ gridArea: "header" }}>
+    <div className="panel">
         <h1>Набалдажник</h1>
         <div className="row" style={{ gap: 8 }}>
             <label>

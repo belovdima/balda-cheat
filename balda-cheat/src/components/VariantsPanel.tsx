@@ -45,19 +45,23 @@ export const VariantsPanel: React.FC<Props> = ({
             </span>
         </div>
 
-        <div className="row" style={{ gap: 8, marginTop: 8 }}>
-            <button onClick={onNeedEdit}>Нет нужного слова</button>
-            <button onClick={onArmDelete}>Удалить букву</button>
+        <div className="row option-buttons" style={{ gap: 8, marginTop: 8 }}>
+            <button className="no-word" onClick={onNeedEdit}>
+                Нет нужного слова
+            </button>
+            <button className="delete-letter" onClick={onArmDelete}>
+                Удалить букву
+            </button>
             {deleteArmed && (
                 <small className="badge">
                     Кликни по букве на поле для удаления
                 </small>
             )}
-            <button onClick={onRecalc}>Просчитать всевозможные слова</button>
+            {/* <button onClick={onRecalc}>Просчитать всевозможные слова</button> */}
         </div>
 
         <SuggestionsList
-            className="suggestions"
+            className="suggestions suggestions-10rows"
             moves={filteredMoves}
             query={query}
             highlight={highlight}

@@ -441,66 +441,72 @@ label {
     }
 }
 
-/* липкая клавиатура на мобилках */
-@media (max-width: 600px) {
-    .keyboard {
-        position: sticky;
-        bottom: 0;
-        padding-bottom: 4px;
-        background: linear-gradient(
-            180deg,
-            rgba(21, 26, 33, 0) 0%,
-            rgba(21, 26, 33, 0.9) 20%,
-            rgba(21, 26, 33, 1) 100%
-        );
-    }
-}
-
 /* ---------- Десктопная раскладка ---------- */
 @media (min-width: 1100px) {
+    /* мобильная колонка-стек */
+    @media (max-width: 900px) {
+        .main-row {
+            flex-direction: column;
+        }
+        .left-col,
+        .right-col {
+            min-width: 0;
+        }
+        .left-col .panel,
+        .right-col .panel {
+            min-height: 0; /* на мобилках пусть высота адаптивная */
+        }
+    }
+    /* ----- Простая раскладка без grid ----- */
     .container {
         max-width: 1200px;
-        grid-template-columns: 1.1fr 1.1fr 0.8fr;
-        grid-template-rows: auto 1fr auto;
-        grid-template-areas:
-            "header  header  header"
-            "board   preview list"
-            "black   black   black";
-    }
-    .container > .panel:nth-of-type(1) {
-        grid-area: header;
-    }
-    .container > .panel:nth-of-type(2) {
-        grid-area: board;
-    }
-    .container > .panel:nth-of-type(3) {
-        grid-area: preview;
-    }
-    .container > .panel:nth-of-type(4) {
-        grid-area: list;
-    }
-    .container > .panel:nth-of-type(5) {
-        grid-area: black;
+        padding: 0 16px;
+        margin: 24px auto;
     }
 
-    .container > .panel:nth-of-type(3),
-    .container > .panel:nth-of-type(4) {
+    /* шапка */
+    .header-bar {
+        margin-bottom: 16px;
+    }
+
+    /* основная строка: 2 колонки */
+    .main-row {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        gap: 16px;
+    }
+
+    /* колонки — по половине, но не уже 360px */
+    .left-col,
+    .right-col {
+        flex: 1 1 0;
+        min-width: 360px;
+    }
+
+    /* делаем основные панели чуть выше и ровнее */
+    .left-col .panel,
+    .right-col .panel {
         display: flex;
         flex-direction: column;
-        height: 100%;
-        min-height: 520px;
+        min-height: 620px; /* «чуть выше» */
     }
 
-    /* список ровно на 10 строк */
+    /* нижняя панель с textarea */
+    .blacklist-panel {
+        margin-top: 8px;
+    }
+
+    /* список: около 10 строк + скролл */
     :root {
         --row: 40px;
     }
-    .container > .panel:nth-of-type(4) .suggestions {
+    .suggestions-10rows {
         overflow-y: auto;
-        flex: 0 0 auto;
         max-height: calc(var(--row) * 10);
+        margin-top: 10px;
     }
-    .container > .panel:nth-of-type(4) .suggestion {
+    .suggestions-10rows .suggestion {
         display: grid;
         align-items: center;
         height: var(--row);
@@ -508,19 +514,19 @@ label {
         grid-template-columns: 1fr auto;
         column-gap: 8px;
     }
+}
 
-    :root {
-        --cell: 52px;
+@media (max-width: 900px) {
+    .main-row {
+        flex-direction: column;
     }
-    .grid {
-        gap: 8px;
+    .left-col,
+    .right-col {
+        min-width: 0;
     }
-    .cell {
-        font-size: calc(var(--cell) * 0.42);
-    }
-
-    .container > .panel:nth-of-type(5) textarea {
-        min-height: 120px;
+    .left-col .panel,
+    .right-col .panel {
+        min-height: 0; /* на мобилках пусть высота адаптивная */
     }
 }
 
@@ -568,3 +574,20 @@ mark.hl {
 
 /* Рипл уже есть в .key::after — этот блок просто напоминание:
    координаты устанавливаются JS-обработчиком в App.tsx */
+
+.option-buttons {
+    display: flex;
+    justify-content: space-between;
+}
+
+.no-word {
+    color: #000;
+    background: linear-gradient(180deg, #4fd1c5, #3fbfb5);
+    box-shadow: 0 6px 16px rgba(79, 209, 197, 0.35);
+}
+
+.delete-letter {
+    color: #fff;
+    background: linear-gradient(180deg, #804949, #ee5959);
+    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.35);
+}

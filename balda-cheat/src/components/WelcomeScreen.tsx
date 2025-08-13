@@ -43,14 +43,13 @@ export const WelcomeScreen: React.FC<Props> = ({
 
             <div className="panel" style={{ padding: 16 }}>
                 <div className="row" style={{ gap: 10 }}>
-                    {onCalc && (
-                        <button onClick={onCalc}>
-                            Просчитать всевозможные слова
-                        </button>
-                    )}
                     <span className="badge">
                         Слов в словаре: {dictCount ?? "…"}
                     </span>
+                    <span className="badge">
+                        Максимальная длина слов из словаря: 10 букв
+                    </span>
+                    <span className="badge">Ë = Е</span>
                 </div>
             </div>
         </div>

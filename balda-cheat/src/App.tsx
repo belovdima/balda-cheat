@@ -190,115 +190,124 @@ export default function App() {
     }
 
     return (
-        <div className="container" style={{ maxWidth: 1200 }}>
-            <HeaderBar
-                startWord={startWord}
-                onChangeStartWord={setStartWord}
-                onRestart={() => {
-                    setPhase("welcome");
-                    setViewMode("analyze");
-                }}
-                totalMoves={moves.length}
-            />
-
-            {/* Левая колонка */}
-            {viewMode === "edit" ? (
-                <BoardEditorPanel
-                    board={board}
-                    onCellClick={handleCellClick}
-                    onCancel={() => setViewMode("analyze")}
+        <div className="container">
+            {/* шапка */}
+            <div className="header-bar">
+                <HeaderBar
+                    startWord={startWord}
+                    onChangeStartWord={setStartWord}
+                    onRestart={() => {
+                        setPhase("welcome");
+                        setViewMode("analyze");
+                    }}
+                    totalMoves={moves.length}
                 />
-            ) : (
-                <PreviewPanel
-                    board={board}
-                    preview={preview}
-                    onApply={applyMove}
-                    onCellClick={handleCellClick}
-                />
-            )}
+            </div>
 
-            {/* Правая колонка */}
-            {viewMode === "edit" ? (
+            {/* основная строка: левая и правая колонка */}
+            <div className="main-row">
+                <div className="left-col">
+                    {viewMode === "edit" ? (
+                        <BoardEditorPanel
+                            board={board}
+                            onCellClick={handleCellClick}
+                            onCancel={() => setViewMode("analyze")}
+                        />
+                    ) : (
+                        <PreviewPanel
+                            board={board}
+                            preview={preview}
+                            onApply={applyMove}
+                            onCellClick={handleCellClick}
+                        />
+                    )}
+                </div>
+
+                <div className="right-col">
+                    {viewMode === "edit" ? (
+                        <div className="panel">
+                            <h1>Клавиатура</h1>
+                            <div className="row" style={{ gap: 8 }}>
+                                <span className="badge">
+                                    Выбрано: {picked ? `«${picked}»` : "—"}
+                                </span>
+                                <button onClick={() => setPicked(null)}>
+                                    Сбросить выбор
+                                </button>
+                            </div>
+                            <div style={{ height: 8 }} />
+                            <Keyboard
+                                value={picked}
+                                onPick={setPicked}
+                                layout="qwerty-ru"
+                            />
+                            <hr />
+                            <div className="row" style={{ gap: 8 }}>
+                                <button onClick={() => setViewMode("analyze")}>
+                                    Не ставить букву
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setDeleteArmed(true);
+                                        setViewMode("edit");
+                                    }}>
+                                    Удалить букву на поле
+                                </button>
+                                {deleteArmed && (
+                                    <small className="badge">
+                                        Кликни по букве на поле для удаления
+                                    </small>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <VariantsPanel
+                            moves={moves}
+                            filteredMoves={filteredMoves}
+                            query={query}
+                            onChangeQuery={setQuery}
+                            onNeedEdit={() => setViewMode("edit")}
+                            onArmDelete={() => setDeleteArmed(true)}
+                            deleteArmed={deleteArmed}
+                            onRecalc={calc}
+                            active={preview}
+                            onPickPreview={setPreview}
+                            onApply={applyMove}
+                            highlight={highlightWord}
+                        />
+                    )}
+                </div>
+            </div>
+
+            {/* низ — чёрный список */}
+            <div className="blacklist-panel">
                 <div className="panel">
-                    <h1>Клавиатура</h1>
-                    <div className="row" style={{ gap: 8 }}>
-                        <span className="badge">
-                            Выбрано: {picked ? `«${picked}»` : "—"}
-                        </span>
-                        <button onClick={() => setPicked(null)}>
-                            Сбросить выбор
-                        </button>
+                    <h1>Использованные слова</h1>
+                    <div className="row">
+                        <textarea
+                            placeholder="Через запятую или с новой строки"
+                            rows={4}
+                            style={{ width: "100%" }}
+                            value={bannedInput}
+                            onChange={(e) => setBannedInput(e.target.value)}
+                        />
                     </div>
-                    <div style={{ height: 8 }} />
-                    {/* твоя Keyboard уже поддерживает RU */}
-                    <Keyboard
-                        value={picked}
-                        onPick={setPicked}
-                        layout="qwerty-ru"
-                    />
                     <hr />
+                    <small className="badge">
+                        Слова из этого списка не будут предлагаться. Стартовое
+                        слово добавляется сюда автоматически.
+                    </small>
+                    <div style={{ height: 6 }} />
                     <div className="row" style={{ gap: 8 }}>
-                        <button onClick={() => setViewMode("analyze")}>
-                            Не ставить букву
-                        </button>
+                        <button onClick={() => recalc()}>Пересчитать</button>
                         <button
                             onClick={() => {
-                                setDeleteArmed(true);
-                                setViewMode("edit");
+                                setBannedInput("");
+                                recalc(board, []);
                             }}>
-                            Удалить букву на поле
+                            Очистить список
                         </button>
-                        {deleteArmed && (
-                            <small className="badge">
-                                Кликни по букве на поле для удаления
-                            </small>
-                        )}
                     </div>
-                </div>
-            ) : (
-                <VariantsPanel
-                    moves={moves}
-                    filteredMoves={filteredMoves}
-                    query={query}
-                    onChangeQuery={setQuery}
-                    onNeedEdit={() => setViewMode("edit")}
-                    onArmDelete={() => setDeleteArmed(true)}
-                    deleteArmed={deleteArmed}
-                    onRecalc={calc}
-                    active={preview}
-                    onPickPreview={setPreview}
-                    onApply={applyMove}
-                    highlight={highlightWord}
-                />
-            )}
-
-            {/* Низ: чёрный список */}
-            <div className="panel" style={{ gridArea: "black" }}>
-                <h1>Использованные слова</h1>
-                <div className="row">
-                    <textarea
-                        placeholder="Через запятую или с новой строки"
-                        rows={4}
-                        style={{ width: "100%" }}
-                        value={bannedInput}
-                        onChange={(e) => setBannedInput(e.target.value)}
-                    />
-                </div>
-                <hr />
-                <small className="badge">
-                    Слова из этого списка не будут предлагаться. Стартовое слово
-                    добавляется сюда автоматически.
-                </small>
-                <div style={{ height: 6 }} />
-                <div className="row" style={{ gap: 8 }}>
-                    <button onClick={() => recalc()}>Пересчитать</button>
-                    <button
-                        onClick={() => {
-                            setBannedInput("");
-                            recalc(board, []);
-                        }}>
-                        Очистить список
-                    </button>
                 </div>
             </div>
         </div>
