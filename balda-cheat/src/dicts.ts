@@ -1,11 +1,9 @@
 import { norm } from "./letters";
 
-// Базовая нормализация и фильтры для "Балды"
+// --- нормализация и парсинг ---
 function cleanWord(w: string): string {
     const s = norm(w);
-    // минимальная длина: 3 (можно 2, если ваши правила разрешают)
     if (s.length < 3) return "";
-    // только кириллица
     if (!/^[А-Я]+$/.test(s)) return "";
     return s;
 }
@@ -21,17 +19,18 @@ function dedupe(arr: string[]): string[] {
 }
 
 function parseWords(text: string): string[] {
-    // поддержим форматы: одна строка — одно слово, или список, разделённый пробелами
     const raw = text.split(/\r?\n|[\s,;]+/);
     const cleaned = raw.map(cleanWord).filter(Boolean);
     return dedupe(cleaned);
 }
 
-// Кэш в localStorage (по ключу)
+// --- кэш в localStorage ---
 function saveCache(key: string, words: string[]) {
     try {
         localStorage.setItem(key, JSON.stringify(words));
-    } catch {}
+    } catch {
+        console.warn("[DICT] не удалось сохранить кэш в localStorage");
+    }
 }
 function loadCache(key: string): string[] | null {
     try {
@@ -39,64 +38,66 @@ function loadCache(key: string): string[] | null {
         if (!s) return null;
         const arr = JSON.parse(s);
         if (Array.isArray(arr) && arr.length) return arr as string[];
-    } catch {}
+    } catch {
+        console.warn("[DICT] не удалось загрузить кэш из localStorage");
+    }
     return null;
 }
 
-/**
- * Грузит словарь из /public, кэширует в localStorage.
- * @param path пример: "/dicts/ru_words.txt"
- * @param cacheKey ключ кэша: "dict_ru_words_v1"
- */
+// --- источники загрузки ---
 export async function loadDictFromPublic(
     path: string,
     cacheKey = "dict_ru_words_v1"
 ): Promise<string[]> {
     const cached = loadCache(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+        console.log("[DICT] cache hit:", cacheKey, "count:", cached.length);
+        return cached;
+    }
 
     const text = await fetchText(path);
     const words = parseWords(text);
+    console.log("[DICT] fetched from public:", path, "count:", words.length);
     saveCache(cacheKey, words);
     return words;
 }
 
-/**
- * Загрузка из внешнего URL (если захочешь тянуть с GitHub RAW или CDN).
- * Лучше ставить свой cacheKey с версией, чтобы можно было инвалидировать.
- */
 export async function loadDictFromUrl(
     url: string,
     cacheKey = "dict_remote_v1"
 ): Promise<string[]> {
     const cached = loadCache(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+        console.log("[DICT] cache hit:", cacheKey, "count:", cached.length);
+        return cached;
+    }
 
     const text = await fetchText(url);
     const words = parseWords(text);
+    console.log("[DICT] fetched from url:", url, "count:", words.length);
     saveCache(cacheKey, words);
     return words;
 }
 
-// Твой прежний мини-словарь оставим как fallback
+// fallback-словарик
 export async function loadLocalDict(): Promise<string[]> {
-    const seed = `
-    ЛИЛИЯ ЛИС МИР МИРА САЛАТ СЕТЬ ЛЕСТНИЦА ЛИРА ЛИМОН СОН НОС ЛИСА ЛИСТ ТОН НИТЬ
-  `;
-    return parseWords(seed);
+    const seed = `ЛИЛИЯ ЛИС МИР МИРА САЛАТ СЕТЬ ЛЕСТНИЦА ЛИРА ЛИМОН СОН НОС ЛИСА ЛИСТ ТОН НИТЬ`;
+    const words = parseWords(seed);
+    console.log("[DICT] fallback local seed, count:", words.length);
+    return words;
 }
 
-/**
- * Универсальная функция: пробует большой словарь из /public,
- * если не получилось — возвращает mini.
- */
+// --- универсальная обёртка ---
 export async function getDictionary(): Promise<string[]> {
     try {
-        return await loadDictFromPublic(
+        const words = await loadDictFromPublic(
             "/dicts/ru_words.txt",
-            "dict_ru_words_v1"
-        );
-    } catch {
+            "dict_ru_words_v2"
+        ); // v2 чтобы инвалидировать кэш
+        console.log("[DICT] using public file, total:", words.length);
+        return words;
+    } catch (err) {
+        console.warn("[DICT] public load failed, using fallback.", err);
         return await loadLocalDict();
     }
 }
