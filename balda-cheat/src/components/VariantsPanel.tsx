@@ -8,9 +8,9 @@ type Props = {
     query: string;
     onChangeQuery: (v: string) => void;
     onNeedEdit: () => void;
-    onArmDelete: () => void;
+    onArmDelete: () => void; // оставим имя, но теперь это "toggle"
     deleteArmed: boolean;
-    onRecalc: () => void;
+    onRecalc?: () => void;
     active: Move | null;
     onPickPreview: (m: Move) => void;
     onApply: (m: Move) => void;
@@ -25,7 +25,6 @@ export const VariantsPanel: React.FC<Props> = ({
     onNeedEdit,
     onArmDelete,
     deleteArmed,
-    onRecalc,
     active,
     onPickPreview,
     onApply,
@@ -33,6 +32,7 @@ export const VariantsPanel: React.FC<Props> = ({
 }) => (
     <div className="panel">
         <h1>Все варианты</h1>
+
         <div className="row" style={{ gap: 8 }}>
             <input
                 placeholder="Быстрый поиск по словам…"
@@ -49,15 +49,19 @@ export const VariantsPanel: React.FC<Props> = ({
             <button className="no-word" onClick={onNeedEdit}>
                 Нет нужного слова
             </button>
-            <button className="delete-letter" onClick={onArmDelete}>
-                Удалить букву
+
+            <button
+                className={`delete-letter${deleteArmed ? " active" : ""}`}
+                onClick={onArmDelete}
+                aria-pressed={deleteArmed}>
+                {deleteArmed ? "Не удалять букву" : "Удалить букву"}
             </button>
+
             {deleteArmed && (
                 <small className="badge">
                     Кликни по букве на поле для удаления
                 </small>
             )}
-            {/* <button onClick={onRecalc}>Просчитать всевозможные слова</button> */}
         </div>
 
         <SuggestionsList

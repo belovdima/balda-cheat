@@ -11,8 +11,8 @@ import zlib from "zlib";
  *   node scripts/build-dict.mjs ./opencorpora.txt ./public/dicts/ru_words.txt
  */
 
-const MIN_LEN = 3;
-const MAX_LEN = 8;
+const MIN_LEN = 2;
+const MAX_LEN = 10;
 
 // --- утилиты ---
 function normWord(s) {

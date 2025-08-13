@@ -602,3 +602,10 @@ mark.hl {
     background: linear-gradient(180deg, #804949, #ee5959);
     box-shadow: 0 6px 16px rgba(255, 107, 107, 0.35);
 }
+
+.delete-letter.active {
+    border-color: rgba(255, 107, 107, 0.6);
+    /* когда режим удаления включён — сделаем заметнее */
+    background: linear-gradient(180deg, #ee5959, #c93f3f);
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.45);
+}

@@ -243,16 +243,28 @@ export default function App() {
                             />
                             <hr />
                             <div className="row" style={{ gap: 8 }}>
-                                <button onClick={() => setViewMode("analyze")}>
-                                    Не ставить букву
-                                </button>
                                 <button
                                     onClick={() => {
-                                        setDeleteArmed(true);
-                                        setViewMode("edit");
+                                        setViewMode("analyze");
+                                        setDeleteArmed(false); // ← снимаем режим удаления при выходе из редактирования
                                     }}>
-                                    Удалить букву на поле
+                                    Не ставить букву
                                 </button>
+
+                                <button
+                                    className={`delete-letter${
+                                        deleteArmed ? " active" : ""
+                                    }`}
+                                    onClick={() => {
+                                        setViewMode("edit"); // остаёмся в редакторе
+                                        setDeleteArmed((v) => !v); // ← TOGGLE вместо принудительного true
+                                    }}
+                                    aria-pressed={deleteArmed}>
+                                    {deleteArmed
+                                        ? "Не удалять букву"
+                                        : "Удалить букву на поле"}
+                                </button>
+
                                 {deleteArmed && (
                                     <small className="badge">
                                         Кликни по букве на поле для удаления
@@ -267,7 +279,7 @@ export default function App() {
                             query={query}
                             onChangeQuery={setQuery}
                             onNeedEdit={() => setViewMode("edit")}
-                            onArmDelete={() => setDeleteArmed(true)}
+                            onArmDelete={() => setDeleteArmed((v) => !v)}
                             deleteArmed={deleteArmed}
                             onRecalc={calc}
                             active={preview}
